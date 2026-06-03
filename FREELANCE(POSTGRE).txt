@@ -1,0 +1,251 @@
+This is the tables create me this table in postgre SQL
+usercredentials = Use for login table
+UserInfo.UserId = Foreign Key ( INT )
+Username = VARCHAR(120)
+UserPassword =VARCHAR(200)
+DateCreated = DATETIME
+Failed/Attempts = INT
+isEnabled = Smallint
+LastPwChange = DATETIME
+LastCredReset = DATETIME
+isLogin = Smallint
+
+UserInfo = used for registering accounts
+Userid= Primary Key INT
+FullName = VARCHAR(210)
+FName = VARCHAR(70)
+LName = VARCHR(70)
+MName = VARCHR(70)
+StaffID = VARCHR(40)
+ContactNumber = VARCHR(20)
+Birthdate = DATETIME
+Email = varchar(210) ALLOW NULLS
+UseraccountType.UserRoleID = Foreign Key BIGINT
+
+UserAccount Type
+UserroleID = BIGINT Primary Key
+Role Desc = VARCHAR(255)
+Status = Smallint
+
+
+--- pOSTGRE --
+-- UserAccountType table
+CREATE TABLE UserAccountType (
+    UserRoleID BIGSERIAL PRIMARY KEY,       -- BIGINT auto-increment
+    RoleDesc VARCHAR(255) NOT NULL,
+    Status SMALLINT DEFAULT 1               -- 1 = active, 0 = inactive
+);
+
+-- UserInfo table
+CREATE TABLE UserInfo (
+    UserID SERIAL PRIMARY KEY,              -- INT auto-increment
+    FullName VARCHAR(210) NOT NULL,
+    FName VARCHAR(70) NOT NULL,
+    LName VARCHAR(70) NOT NULL,
+    MName VARCHAR(70),
+    StaffID VARCHAR(40) UNIQUE,
+    ContactNumber VARCHAR(20),
+    Birthdate TIMESTAMP,
+    Email VARCHAR(210),                     -- allows NULLs by default
+    UserRoleID BIGINT REFERENCES UserAccountType(UserRoleID) ON DELETE SET NULL
+);
+
+-- UserCredentials table
+CREATE TABLE UserCredentials (
+    CredentialID SERIAL PRIMARY KEY,
+    UserID INT REFERENCES UserInfo(UserID) ON DELETE CASCADE,
+    Username VARCHAR(120) UNIQUE NOT NULL,
+    UserPassword VARCHAR(200) NOT NULL,
+    DateCreated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FailedAttempts INT DEFAULT 0,
+    IsEnabled SMALLINT DEFAULT 1,           -- 1 = enabled, 0 = disabled
+    LastPwChange TIMESTAMP,
+    LastCredReset TIMESTAMP,
+    IsLogin SMALLINT DEFAULT 0              -- 1 = logged in, 0 = not
+);
+
+
+---------------------------------------------------------------------------------
+ADD USER
+--------------------------------------------------------------------------------
+-- Create a function to insert a new user with password
+CREATE OR REPLACE FUNCTION AddUser(
+    p_fullname VARCHAR,
+    p_fname VARCHAR,
+    p_lname VARCHAR,
+    p_mname VARCHAR DEFAULT NULL,
+    p_staffid VARCHAR DEFAULT NULL,
+    p_contactnumber VARCHAR DEFAULT NULL,
+    p_birthdate TIMESTAMP DEFAULT NULL,
+    p_email VARCHAR DEFAULT NULL,
+    p_userroleid BIGINT DEFAULT NULL,
+    p_userpassword VARCHAR DEFAULT NULL   -- password input
+)
+RETURNS VOID AS $$
+DECLARE
+    new_userid INT;
+    generated_username VARCHAR(120);
+BEGIN
+    -- Insert into UserInfo and capture the new UserID
+    INSERT INTO UserInfo (
+        FullName, FName, LName, MName, StaffID, ContactNumber, Birthdate, Email, UserRoleID
+    )
+    VALUES (
+        p_fullname, p_fname, p_lname, p_mname, p_staffid, p_contactnumber, p_birthdate, p_email, p_userroleid
+    )
+    RETURNING UserID INTO new_userid;
+
+    -- Generate username (simple concatenation of names)
+    generated_username := COALESCE(p_fname, '') || COALESCE(p_mname, '') || COALESCE(p_lname, '');
+
+    -- Insert into UserCredentials
+    INSERT INTO UserCredentials (
+        UserID,
+        Username,
+        UserPassword,
+        DateCreated,
+        FailedAttempts,
+        IsEnabled,
+        LastPwChange,
+        LastCredReset,
+        IsLogin
+    )
+    VALUES (
+        new_userid,
+        generated_username,
+        p_userpassword,
+        CURRENT_TIMESTAMP,
+        0,
+        1,
+        NULL,
+        NULL,
+        0
+    );
+END;
+$$ LANGUAGE plpgsql;
+
+
+---------------------------------------------------
+EDIT USER
+----------------------------------------------------
+-- FUNCTION: public.updateuser(integer, character varying, character varying, character varying, character varying, character varying, character varying, timestamp without time zone, character varying, bigint)
+
+-- DROP FUNCTION IF EXISTS public.updateuser(integer, character varying, character varying, character varying, character varying, character varying, character varying, timestamp without time zone, character varying, bigint);
+
+CREATE OR REPLACE FUNCTION public.updateuser(
+	p_userid integer,
+	p_fullname character varying DEFAULT NULL::character varying,
+	p_fname character varying DEFAULT NULL::character varying,
+	p_lname character varying DEFAULT NULL::character varying,
+	p_mname character varying DEFAULT NULL::character varying,
+	p_staffid character varying DEFAULT NULL::character varying,
+	p_contactnumber character varying DEFAULT NULL::character varying,
+	p_birthdate timestamp without time zone DEFAULT NULL::timestamp without time zone,
+	p_email character varying DEFAULT NULL::character varying,
+	p_userroleid bigint DEFAULT NULL::bigint)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE PARALLEL UNSAFE
+AS $BODY$
+DECLARE
+    new_fname VARCHAR;
+    new_mname VARCHAR;
+    new_lname VARCHAR;
+    new_username VARCHAR;
+BEGIN
+    -- Update UserInfo
+    UPDATE UserInfo
+    SET
+        FullName       = COALESCE(p_fullname, FullName),
+        FName          = COALESCE(p_fname, FName),
+        LName          = COALESCE(p_lname, LName),
+        MName          = COALESCE(p_mname, MName),
+        StaffID        = COALESCE(p_staffid, StaffID),
+        ContactNumber  = COALESCE(p_contactnumber, ContactNumber),
+        Birthdate      = COALESCE(p_birthdate, Birthdate),
+        Email          = COALESCE(p_email, Email),
+        UserRoleID     = COALESCE(p_userroleid, UserRoleID)
+    WHERE UserID = p_userid;
+
+    -- Fetch updated names
+    SELECT FName, MName, LName
+    INTO new_fname, new_mname, new_lname
+    FROM UserInfo
+    WHERE UserID = p_userid;
+
+    -- Generate new username
+    new_username := COALESCE(new_fname, '') || COALESCE(new_mname, '') || COALESCE(new_lname, '');
+
+    -- Update UserCredentials username
+    UPDATE UserCredentials
+    SET Username = new_username
+    WHERE UserID = p_userid;
+END;
+$BODY$;
+
+ALTER FUNCTION public.updateuser(integer, character varying, character varying, character varying, character varying, character varying, character varying, timestamp without time zone, character varying, bigint)
+    OWNER TO myuser;
+--------------------------------------------------
+DELETE USER
+-- FUNCTION: public.deleteuser(integer)
+
+-- DROP FUNCTION IF EXISTS public.deleteuser(integer);
+
+CREATE OR REPLACE FUNCTION public.deleteuser(
+	p_userid integer)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE PARALLEL UNSAFE
+AS $BODY$
+BEGIN
+    -- Delete credentials linked to the user
+    DELETE FROM UserCredentials
+    WHERE UserID = p_userid;
+
+    -- Delete the user record itself
+    DELETE FROM UserInfo
+    WHERE UserID = p_userid;
+END;
+$BODY$;
+
+ALTER FUNCTION public.deleteuser(integer)
+    OWNER TO myuser;
+-------------------------------------------------------------
+
+SAMPLE ADD USER
+SELECT AddUser(
+    'Juan Dela Cruz',          -- p_fullname
+    'Juan',                    -- p_fname
+    'Cruz',                    -- p_lname
+    'Madlansacay',                    -- p_mname
+    'STF3004',                 -- p_staffid
+    '09991234567',             -- p_contactnumber
+    '1988-07-21',              -- p_birthdate
+    'juan.cruz@example.com',   -- p_email
+    1,                         -- p_userroleid (e.g., Administrator role)
+    'SecurePass123!'           -- p_userpassword
+);
+
+---------------------------------------------------------------
+
+SAMPLE Update User
+
+SELECT updateuser(
+    3,                       -- p_userid (the user you want to update)
+    'TITCH',         -- p_fullname
+    'Juan',                   -- p_fname
+    'Cruz',                   -- p_lname
+    'Dela',                   -- p_mname
+    'STF3001',                -- p_staffid
+    '09991234567',            -- p_contactnumber
+    '1988-07-21',             -- p_birthdate
+    'juan.cruz@example.com',  -- p_email
+    1                         -- p_userroleid (e.g., Manager role)
+);
+-------------------------------------------------------------------
+SAMPLE DELETE USSER
+
+
+SELECT deleteuser(12);
