@@ -257,18 +257,20 @@ END;
 $$ LANGUAGE plpgsql;
 --------------------------------------------------
 DELETE USER
--- FUNCTION: public.deleteuser(integer)
-
--- DROP FUNCTION IF EXISTS public.deleteuser(integer);
-
 CREATE OR REPLACE FUNCTION public.deleteuser(
-	p_userid integer)
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    COST 100
-    VOLATILE PARALLEL UNSAFE
-AS $BODY$
+    p_userid INT
+)
+RETURNS VOID AS $$
+DECLARE
+    current_contactid INT;
+    current_addressid INT;
 BEGIN
+    -- Get ContactID and AddressID linked to this user
+    SELECT ContactID, AddressID
+    INTO current_contactid, current_addressid
+    FROM UserInfo
+    WHERE UserID = p_userid;
+
     -- Delete credentials linked to the user
     DELETE FROM UserCredentials
     WHERE UserID = p_userid;
@@ -276,11 +278,20 @@ BEGIN
     -- Delete the user record itself
     DELETE FROM UserInfo
     WHERE UserID = p_userid;
-END;
-$BODY$;
 
-ALTER FUNCTION public.deleteuser(integer)
-    OWNER TO myuser;
+    -- Delete linked Contacts record
+    IF current_contactid IS NOT NULL THEN
+        DELETE FROM Contacts
+        WHERE ContactID = current_contactid;
+    END IF;
+
+    -- Delete linked Address record
+    IF current_addressid IS NOT NULL THEN
+        DELETE FROM Address
+        WHERE AddressID = current_addressid;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
 -------------------------------------------------------------
 
 SAMPLE ADD USER
