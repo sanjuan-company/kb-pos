@@ -97,7 +97,7 @@ CREATE TABLE Address (
 ---------------------------------------------------------------------------------
 ADD USER
 --------------------------------------------------------------------------------
--- Create a function to insert a new user with password
+-- Create or replace function to insert a new user with password
 CREATE OR REPLACE FUNCTION AddUser(
     p_fullname VARCHAR,
     p_fname VARCHAR,
@@ -105,22 +105,46 @@ CREATE OR REPLACE FUNCTION AddUser(
     p_mname VARCHAR DEFAULT NULL,
     p_staffid VARCHAR DEFAULT NULL,
     p_contactnumber VARCHAR DEFAULT NULL,
-    p_birthdate TIMESTAMP DEFAULT NULL,
     p_email VARCHAR DEFAULT NULL,
+    p_telephonenumber VARCHAR DEFAULT NULL,
+    p_mainaddress VARCHAR DEFAULT NULL,
+    p_secondaryaddress VARCHAR DEFAULT NULL,
+    p_lastaddress VARCHAR DEFAULT NULL,
+    p_birthdate TIMESTAMP DEFAULT NULL,
     p_userroleid BIGINT DEFAULT NULL,
     p_userpassword VARCHAR DEFAULT NULL   -- password input
 )
 RETURNS VOID AS $$
 DECLARE
     new_userid INT;
+    new_contactid INT;
+    new_addressid INT;
     generated_username VARCHAR(120);
 BEGIN
-    -- Insert into UserInfo and capture the new UserID
-    INSERT INTO UserInfo (
-        FullName, FName, LName, MName, StaffID, ContactNumber, Birthdate, Email, UserRoleID
+    -- Insert into Contacts and capture new ContactID
+    INSERT INTO Contacts (
+        ContactNumber, EmailAddress, TelephoneNumber
     )
     VALUES (
-        p_fullname, p_fname, p_lname, p_mname, p_staffid, p_contactnumber, p_birthdate, p_email, p_userroleid
+        p_contactnumber, p_email, p_telephonenumber
+    )
+    RETURNING ContactID INTO new_contactid;
+
+    -- Insert into Address and capture new AddressID
+    INSERT INTO Address (
+        MainAddress, SecondaryAddress, LastAddress
+    )
+    VALUES (
+        p_mainaddress, p_secondaryaddress, p_lastaddress
+    )
+    RETURNING AddressID INTO new_addressid;
+
+    -- Insert into UserInfo and capture the new UserID
+    INSERT INTO UserInfo (
+        FullName, FName, LName, MName, StaffID, ContactID, AddressID, Birthdate, UserRoleID
+    )
+    VALUES (
+        p_fullname, p_fname, p_lname, p_mname, p_staffid, new_contactid, new_addressid, p_birthdate, p_userroleid
     )
     RETURNING UserID INTO new_userid;
 
@@ -245,16 +269,20 @@ ALTER FUNCTION public.deleteuser(integer)
 
 SAMPLE ADD USER
 SELECT AddUser(
-    'Juan Dela Cruz',          -- p_fullname
-    'Juan',                    -- p_fname
-    'Cruz',                    -- p_lname
-    'Madlansacay',                    -- p_mname
-    'STF3004',                 -- p_staffid
-    '09991234567',             -- p_contactnumber
-    '1988-07-21',              -- p_birthdate
-    'juan.cruz@example.com',   -- p_email
-    1,                         -- p_userroleid (e.g., Administrator role)
-    'SecurePass123!'           -- p_userpassword
+    p_fullname        => 'Juan Dela Cruz',
+    p_fname           => 'Juan',
+    p_lname           => 'Cruz',
+    p_mname           => 'Dela',
+    p_staffid         => 'STF12345',
+    p_contactnumber   => '+639171234567',
+    p_email           => 'juan.cruz@example.com',
+    p_telephonenumber => '0287654321',
+    p_mainaddress     => '123 Mabini Street, Manila',
+    p_secondaryaddress=> 'Unit 5, Sunshine Apartments',
+    p_lastaddress     => 'Old Residence, Quezon City',
+    p_birthdate       => '1990-05-15 00:00:00',
+    p_userroleid      => 1,
+    p_userpassword    => 'SecurePass123!'
 );
 
 ---------------------------------------------------------------

@@ -17,16 +17,20 @@ type App struct {
 }
 
 type UserRequest struct {
-	FullName      string `json:"fullname"`
-	FirstName     string `json:"fname"`
-	LastName      string `json:"lname"`
-	MiddleName    string `json:"mname"`
-	StaffID       string `json:"staffid"`
-	ContactNumber string `json:"contactnumber"`
-	BirthDate     string `json:"birthdate"`
-	Email         string `json:"email"`
-	UserRoleID    int    `json:"userroleid"`
-	Password      string `json:"userpassword"`
+	FullName         string `json:"fullname"`
+	FirstName        string `json:"fname"`
+	LastName         string `json:"lname"`
+	MiddleName       string `json:"mname"`
+	StaffID          string `json:"staffid"`
+	ContactNumber    string `json:"contactnumber"`
+	BirthDate        string `json:"birthdate"`
+	Email            string `json:"email"`
+	TelephoneNumber  string `json:"telephonenumber"`
+	MainAddress      string `json:"mainaddress"`
+	SecondaryAddress string `json:"secondaryaddress"`
+	LastAddress      string `json:"lastaddress"`
+	UserRoleID       int    `json:"userroleid"`
+	Password         string `json:"userpassword"`
 }
 
 type ApiResponse struct {
@@ -135,15 +139,19 @@ func (a *App) deleteUserHandler(c *gin.Context) {
 
 func (a *App) addUser(req UserRequest) error {
 	_, err := a.db.Exec(
-		"SELECT AddUser($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+		"SELECT AddUser($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)",
 		req.FullName,
 		req.FirstName,
 		req.LastName,
 		req.MiddleName,
 		req.StaffID,
 		req.ContactNumber,
-		req.BirthDate,
 		req.Email,
+		req.TelephoneNumber,
+		req.MainAddress,
+		req.SecondaryAddress,
+		req.LastAddress,
+		req.BirthDate,
 		req.UserRoleID,
 		req.Password,
 	)
