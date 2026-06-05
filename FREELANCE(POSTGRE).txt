@@ -27,6 +27,17 @@ UserroleID = BIGINT Primary Key
 Role Desc = VARCHAR(255)
 Status = Smallint
 
+Contacts
+ContactId ( Foreign key for userinfo.contactiD)
+Contact Number Not Null
+Email Address Allow Nulls
+TelephoneNumber Allow Nulls.
+
+Address
+AddressID ( Foreign key for userinfo.AddressID)
+Main Address Not Null
+Secondary Address Allow Nulls
+Last Address Allow Nulls
 
 --- pOSTGRE --
 -- UserAccountType table
@@ -38,16 +49,19 @@ CREATE TABLE UserAccountType (
 
 -- UserInfo table
 CREATE TABLE UserInfo (
-    UserID SERIAL PRIMARY KEY,              -- INT auto-increment
-    FullName VARCHAR(210) NOT NULL,
-    FName VARCHAR(70) NOT NULL,
-    LName VARCHAR(70) NOT NULL,
+    UserID SERIAL PRIMARY KEY,
+    FullName VARCHAR(210),
+    FName VARCHAR(70),
+    LName VARCHAR(70),
     MName VARCHAR(70),
-    StaffID VARCHAR(40) UNIQUE,
-    ContactNumber VARCHAR(20),
+    StaffID VARCHAR(40),
+    ContactID INT,
+    AddressID INT,
     Birthdate TIMESTAMP,
-    Email VARCHAR(210),                     -- allows NULLs by default
-    UserRoleID BIGINT REFERENCES UserAccountType(UserRoleID) ON DELETE SET NULL
+    UserRoleID BIGINT,
+    CONSTRAINT FK_UserInfo_UserAccountType FOREIGN KEY (UserRoleID) REFERENCES UserAccountType(UserRoleID),
+    CONSTRAINT FK_UserInfo_Contacts FOREIGN KEY (ContactID) REFERENCES Contacts(ContactID),
+    CONSTRAINT FK_UserInfo_Address FOREIGN KEY (AddressID) REFERENCES Address(AddressID)
 );
 
 -- UserCredentials table
@@ -64,6 +78,21 @@ CREATE TABLE UserCredentials (
     IsLogin SMALLINT DEFAULT 0              -- 1 = logged in, 0 = not
 );
 
+-- Contacts table
+CREATE TABLE Contacts (
+    ContactID SERIAL PRIMARY KEY,
+    ContactNumber VARCHAR(50) NOT NULL,
+    EmailAddress VARCHAR(255),
+    TelephoneNumber VARCHAR(50)
+);
+
+-- Address table
+CREATE TABLE Address (
+    AddressID SERIAL PRIMARY KEY,
+    MainAddress VARCHAR(255) NOT NULL,
+    SecondaryAddress VARCHAR(255),
+    LastAddress VARCHAR(255)
+);
 
 ---------------------------------------------------------------------------------
 ADD USER
