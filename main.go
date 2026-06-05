@@ -160,7 +160,7 @@ func (a *App) addUser(req UserRequest) error {
 
 func (a *App) updateUser(id int64, req UserRequest) error {
 	_, err := a.db.Exec(
-		"SELECT updateuser($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+		"SELECT updateuser($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)",
 		id,
 		req.FullName,
 		req.FirstName,
@@ -168,8 +168,12 @@ func (a *App) updateUser(id int64, req UserRequest) error {
 		req.MiddleName,
 		req.StaffID,
 		req.ContactNumber,
-		req.BirthDate,
 		req.Email,
+		req.TelephoneNumber,
+		req.MainAddress,
+		req.SecondaryAddress,
+		req.LastAddress,
+		req.BirthDate,
 		req.UserRoleID,
 	)
 	return err

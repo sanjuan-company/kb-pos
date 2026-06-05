@@ -181,44 +181,63 @@ $$ LANGUAGE plpgsql;
 ---------------------------------------------------
 EDIT USER
 ----------------------------------------------------
--- FUNCTION: public.updateuser(integer, character varying, character varying, character varying, character varying, character varying, character varying, timestamp without time zone, character varying, bigint)
-
--- DROP FUNCTION IF EXISTS public.updateuser(integer, character varying, character varying, character varying, character varying, character varying, character varying, timestamp without time zone, character varying, bigint);
-
 CREATE OR REPLACE FUNCTION public.updateuser(
-	p_userid integer,
-	p_fullname character varying DEFAULT NULL::character varying,
-	p_fname character varying DEFAULT NULL::character varying,
-	p_lname character varying DEFAULT NULL::character varying,
-	p_mname character varying DEFAULT NULL::character varying,
-	p_staffid character varying DEFAULT NULL::character varying,
-	p_contactnumber character varying DEFAULT NULL::character varying,
-	p_birthdate timestamp without time zone DEFAULT NULL::timestamp without time zone,
-	p_email character varying DEFAULT NULL::character varying,
-	p_userroleid bigint DEFAULT NULL::bigint)
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    COST 100
-    VOLATILE PARALLEL UNSAFE
-AS $BODY$
+    p_userid INT,
+    p_fullname VARCHAR DEFAULT NULL,
+    p_fname VARCHAR DEFAULT NULL,
+    p_lname VARCHAR DEFAULT NULL,
+    p_mname VARCHAR DEFAULT NULL,
+    p_staffid VARCHAR DEFAULT NULL,
+    p_contactnumber VARCHAR DEFAULT NULL,
+    p_email VARCHAR DEFAULT NULL,
+    p_telephonenumber VARCHAR DEFAULT NULL,
+    p_mainaddress VARCHAR DEFAULT NULL,
+    p_secondaryaddress VARCHAR DEFAULT NULL,
+    p_lastaddress VARCHAR DEFAULT NULL,
+    p_birthdate TIMESTAMP DEFAULT NULL,
+    p_userroleid BIGINT DEFAULT NULL
+)
+RETURNS VOID AS $$
 DECLARE
     new_fname VARCHAR;
     new_mname VARCHAR;
     new_lname VARCHAR;
     new_username VARCHAR;
+    current_contactid INT;
+    current_addressid INT;
 BEGIN
-    -- Update UserInfo
+    -- Get existing ContactID and AddressID for this user
+    SELECT ContactID, AddressID
+    INTO current_contactid, current_addressid
+    FROM UserInfo
+    WHERE UserID = p_userid;
+
+    -- Update Contacts table
+    UPDATE Contacts
+    SET
+        ContactNumber   = COALESCE(p_contactnumber, ContactNumber),
+        EmailAddress    = COALESCE(p_email, EmailAddress),
+        TelephoneNumber = COALESCE(p_telephonenumber, TelephoneNumber)
+    WHERE ContactID = current_contactid;
+
+    -- Update Address table
+    UPDATE Address
+    SET
+        MainAddress      = COALESCE(p_mainaddress, MainAddress),
+        SecondaryAddress = COALESCE(p_secondaryaddress, SecondaryAddress),
+        LastAddress      = COALESCE(p_lastaddress, LastAddress)
+    WHERE AddressID = current_addressid;
+
+    -- Update UserInfo table
     UPDATE UserInfo
     SET
-        FullName       = COALESCE(p_fullname, FullName),
-        FName          = COALESCE(p_fname, FName),
-        LName          = COALESCE(p_lname, LName),
-        MName          = COALESCE(p_mname, MName),
-        StaffID        = COALESCE(p_staffid, StaffID),
-        ContactNumber  = COALESCE(p_contactnumber, ContactNumber),
-        Birthdate      = COALESCE(p_birthdate, Birthdate),
-        Email          = COALESCE(p_email, Email),
-        UserRoleID     = COALESCE(p_userroleid, UserRoleID)
+        FullName   = COALESCE(p_fullname, FullName),
+        FName      = COALESCE(p_fname, FName),
+        LName      = COALESCE(p_lname, LName),
+        MName      = COALESCE(p_mname, MName),
+        StaffID    = COALESCE(p_staffid, StaffID),
+        Birthdate  = COALESCE(p_birthdate, Birthdate),
+        UserRoleID = COALESCE(p_userroleid, UserRoleID)
     WHERE UserID = p_userid;
 
     -- Fetch updated names
@@ -235,10 +254,7 @@ BEGIN
     SET Username = new_username
     WHERE UserID = p_userid;
 END;
-$BODY$;
-
-ALTER FUNCTION public.updateuser(integer, character varying, character varying, character varying, character varying, character varying, character varying, timestamp without time zone, character varying, bigint)
-    OWNER TO myuser;
+$$ LANGUAGE plpgsql;
 --------------------------------------------------
 DELETE USER
 -- FUNCTION: public.deleteuser(integer)
@@ -290,16 +306,20 @@ SELECT AddUser(
 SAMPLE Update User
 
 SELECT updateuser(
-    3,                       -- p_userid (the user you want to update)
-    'TITCH',         -- p_fullname
-    'Juan',                   -- p_fname
-    'Cruz',                   -- p_lname
-    'Dela',                   -- p_mname
-    'STF3001',                -- p_staffid
-    '09991234567',            -- p_contactnumber
-    '1988-07-21',             -- p_birthdate
-    'juan.cruz@example.com',  -- p_email
-    1                         -- p_userroleid (e.g., Manager role)
+    p_userid           => 1,   -- existing UserID to update
+    p_fullname         => 'Maria Santos',
+    p_fname            => 'Maria',
+    p_lname            => 'Santos',
+    p_mname            => 'Lopez',
+    p_staffid          => 'STF98765',
+    p_contactnumber    => '+639181234567',
+    p_email            => 'maria.santos@example.com',
+    p_telephonenumber  => '0276543210',
+    p_mainaddress      => '456 Rizal Avenue, Makati',
+    p_secondaryaddress => 'Unit 12, Greenview Residences',
+    p_lastaddress      => 'Old House, Pasig City',
+    p_birthdate        => '1985-08-20 00:00:00',
+    p_userroleid       => 2
 );
 -------------------------------------------------------------------
 SAMPLE DELETE USSER
