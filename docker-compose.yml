@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: kbpos-postgres
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: "8013075"
+      POSTGRES_DB: postgres
+    ports:
+      - "9041:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U myuser -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    image: kbpos-17-app:latest
+    container_name: kbpos-app
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: "8013075"
+      POSTGRES_DB: postgres
+      APP_PORT: "9040"
+    ports:
+      - "9040:9040"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:

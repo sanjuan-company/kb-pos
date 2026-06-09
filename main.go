@@ -54,7 +54,7 @@ func main() {
 	r.DELETE("/deleteuser/:id", app.deleteUserHandler)
 	r.GET("/health", healthHandler)
 
-	port := envOrDefault("APP_PORT", "8080")
+	port := envOrDefault("APP_PORT", "9040")
 	log.Printf("starting server on :%s", port)
 	log.Fatal(r.Run(":" + port))
 }
@@ -64,7 +64,7 @@ func openDB() (*sql.DB, error) {
 	password := envOrDefault("POSTGRES_PASSWORD", "8013075")
 	dbName := envOrDefault("POSTGRES_DB", "postgres")
 	host := envOrDefault("POSTGRES_HOST", "localhost")
-	port := envOrDefault("POSTGRES_PORT", "5433")
+	port := envOrDefault("POSTGRES_PORT", "5432")
 
 	if user == "" || password == "" || dbName == "" {
 		return nil, fmt.Errorf("missing required environment variables: POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB")
