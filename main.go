@@ -65,20 +65,38 @@ func main() {
 }
 
 func openDB() (*sql.DB, error) {
-	user := envOrDefault("POSTGRES_USER", "myuser")
-	password := envOrDefault("POSTGRES_PASSWORD", "8013075")
-	dbName := envOrDefault("POSTGRES_DB", "postgres")
-	host := envOrDefault("POSTGRES_HOST", "localhost")
-	port := envOrDefault("POSTGRES_PORT", "5432")
+	if dsn := os.Getenv("DATABASE_URL"); dsn != "" {
+		db, err := sql.Open("postgres", dsn)
+		if err != nil {
+			return nil, err
+		}
+		if err := db.Ping(); err != nil {
+			db.Close()
+			return nil, err
+		}
+		return db, nil
+	}
 
-	fmt.Println(user)
-	fmt.Println(password)
-	fmt.Println(dbName)
-	fmt.Println(host)
-	fmt.Println(port)
+	user := envOrDefault("PGUSER", "")
+	password := envOrDefault("PGPASSWORD", "")
+	dbName := envOrDefault("PGDATABASE", "")
+	host := envOrDefault("PGHOST", "")
+	port := envOrDefault("PGPORT", "")
 
-	if user == "" || password == "" || dbName == "" {
-		return nil, fmt.Errorf("missing required environment variables: POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB")
+	if user == "" {
+		user = envOrDefault("POSTGRES_USER", "myuser")
+	}
+	if password == "" {
+		password = envOrDefault("POSTGRES_PASSWORD", "8013075")
+	}
+	if dbName == "" {
+		dbName = envOrDefault("POSTGRES_DB", "postgres")
+	}
+	if host == "" {
+		host = envOrDefault("POSTGRES_HOST", "localhost")
+	}
+	if port == "" {
+		port = envOrDefault("POSTGRES_PORT", "5432")
 	}
 
 	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=verify-full", user, password, host, port, dbName)
