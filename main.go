@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
@@ -40,6 +41,10 @@ type ApiResponse struct {
 }
 
 func main() {
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file loaded, using OS environment")
+	}
+
 	db, err := openDB()
 	if err != nil {
 		log.Fatalf("failed to connect to PostgreSQL: %v", err)
@@ -66,11 +71,17 @@ func openDB() (*sql.DB, error) {
 	host := envOrDefault("POSTGRES_HOST", "localhost")
 	port := envOrDefault("POSTGRES_PORT", "5432")
 
+	fmt.Println(user)
+	fmt.Println(password)
+	fmt.Println(dbName)
+	fmt.Println(host)
+	fmt.Println(port)
+
 	if user == "" || password == "" || dbName == "" {
 		return nil, fmt.Errorf("missing required environment variables: POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB")
 	}
 
-	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", user, password, host, port, dbName)
+	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=verify-full", user, password, host, port, dbName)
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return nil, err

@@ -1,0 +1,9 @@
+{
+    "success": false,
+    "message": "context deadline exceeded",
+    "data": {
+        "id": "bbfcd36d-96ad-4d5c-8155-3b6ed76c0eee",
+        "status": "failed",
+        "provider": "smtp"
+    }
+}
